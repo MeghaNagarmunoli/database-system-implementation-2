@@ -1,6 +1,7 @@
 #include "test.h"
 #include "BigQ.h"
 #include <pthread.h>
+#include <unistd.h>
 
 void *producer (void *arg) {
 
@@ -95,6 +96,7 @@ void test1 (int option, int runlen) {
 	// thread to dump data into the input pipe (for BigQ's consumption)
 	pthread_t thread1;
 	pthread_create (&thread1, NULL, producer, (void *)&input);
+	usleep(2000);
 
 	// thread to read sorted data from output pipe (dumped by BigQ)
 	pthread_t thread2;

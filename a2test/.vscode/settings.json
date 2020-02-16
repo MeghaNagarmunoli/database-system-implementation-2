@@ -5,7 +5,11 @@
         "ostream": "cpp",
         "iostream": "cpp",
         "random": "cpp",
-        "new": "cpp"
+        "new": "cpp",
+        "*.tcc": "cpp",
+        "optional": "cpp",
+        "algorithm": "cpp",
+        "typeinfo": "cpp"
     },
     "editor.tokenColorCustomizations": {
         "textMateRules": [

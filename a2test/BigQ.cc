@@ -150,25 +150,19 @@ void BigQ::sortRun(vector<Record*> &records,File& new_file,int& gp_index,OrderMa
 	int c=0;
 
 	Page *tp = new Page();
-	int pageIsDirty =0;
-
     for(Record *record : records) {
 		if(tp->Append(record)==0){
-			pageIsDirty =0;
 			new_file.AddPage(tp,(off_t)(gp_index++));
 			tp->EmptyItOut();
 			tp->Append(record);
 			c++;	
 		}
 		else{
-			pageIsDirty =1;
 			c++;
 		}						
 	}
 
-	if(pageIsDirty==1){
-		new_file.AddPage(tp,(off_t)(gp_index++));	
-	}
+	new_file.AddPage(tp,(off_t)(gp_index++));	
 	cout<<"G index end "<<gp_index<<"\n";
 	delete tp;
 }
@@ -202,9 +196,9 @@ void* BigQ::TPMMS_Phase1(void* arg){
 	//int r_index[*(args->run_length)];	
 	int num_runs  =  1;		//goes from 1 to n,set to one as the array size is n, else set array size to n+1 to use indexing from 1
 	//r_index[num_runs-1]=1;
-
+    int gp_index_start = 1;
     int numPagesWrittenToFile = 0;
-	
+	vector<pair <int,int>> runMetadata;
 
     while(args->input->Remove(temporary)){
 
@@ -221,8 +215,13 @@ void* BigQ::TPMMS_Phase1(void* arg){
 
 
             // TODO: Maintain meta data about records and pages in each run
-            num_runs++;
+            runMetadata.push_back(make_pair(gp_index_start,gp_index-1));
+            gp_index_start = gp_index;
 
+
+
+            // 
+            num_runs++;
             p_index = 0;
             num_recs = 0;
             //empty it
@@ -243,6 +242,7 @@ void* BigQ::TPMMS_Phase1(void* arg){
     }
       //sort
     sortRun(runVector, new_file, gp_index, args->sort_order);
+    runMetadata.push_back(make_pair(gp_index_start,gp_index-1));
    //  sort(runVector.begin(),runVector.end(),sort_func(args->sort_order));
     //Schema ms ("catalog","nation");
      //       for(Record *i:runVector){
@@ -352,7 +352,7 @@ comment it later			}
 
 	for (int i=0;i<num_runs;i++){
 		
-		new_file.GetPage((buf+i),(off_t)(1+(*args->run_length)*i));
+		new_file.GetPage((buf+i),(off_t)(runMetadata[i].first));
 		(buf+i)->GetFirst(t);
 		(temp->rec).Consume(t);
 		temp->run=i;		
@@ -378,20 +378,31 @@ comment it later			}
 
 
 	for(int i=0;i<num_runs;i++){
-	
 		fin[i]=0;
-		c_i[i]=0;
-
+		c_i[i]=0;     
 	}
 	
-	for(int i=0;i<num_runs-1;i++){
 
-		index[i][start] = 1+((*(args->run_length))*i);
-		index[i][end]   = (*(args->run_length))*(i+1);
+
+    int k=0;
+	for(pair<int, int> runPair: runMetadata){
+
+		index[k][start] =  runPair.first;
+		index[k][end]   = runPair.second;
+        //cout<<"Run index:"<<k<<" start -"<<index[k][start]<<" end-"<<index[k][end]<<endl;
+        k++;
 	}
 
-	index[num_runs-1][start] = 1+((*(args->run_length))*(num_runs-1));
-	index[num_runs-1][end] = gp_index-1;
+    // for(int i=0;i<num_runs-1;i++){
+
+	// 	index[i][start] = 1+((*(args->run_length))*i);
+	// 	index[i][end]   = (*(args->run_length))*(i+1);
+	// }
+
+	// index[num_runs-1][start] = 1+((*(args->run_length))*(num_runs-1));
+	// index[num_runs-1][end] = gp_index-1;
+
+
 
 	//DEBUG
 		

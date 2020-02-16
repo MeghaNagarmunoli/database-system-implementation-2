@@ -39,6 +39,7 @@ class BigQ {
 	void* TPMMS_Phase2(void* arg);
 	static void quicksort(vector<Record> &rb, int left, int right,OrderMaker &sortorder);
 	static void sort_run(Page*,int,File&,int&,OrderMaker *);
+	static void sortRun(vector<Record*>&, File& ,int& gpindex,OrderMaker*);
 //	static bool sort_func(Record &,Record &,OrderMaker &sortorder);	
 	/*Deprecated: Replaced by DBFile , no need for indexing
 	//Record *recordBuff;
@@ -76,26 +77,6 @@ public:
 
 	bool operator()(Record *one,Record *two) const{
 
-		/*Record *one = new Record();
-		Record *two = new Record();
-		one->Copy(const_cast<Record *>(&onei));		
-		
-		two->Copy(const_cast<Record *>(&twoi));		
-		*/	
-	//	Record *inp1 = const_cast<Record*>(one);	
-	//	Record *inp2 = const_cast<Record*>(two);	
-
-//		cout<<"Read at location"<<inp1;
-//		cout<<"Comparing "<<one<<" and "<<two<<"\n";
-
-
-
- //                       Schema schema("catalog","lineitem");
-                        //cout<<"Count: "<<count<<""; 
-//                        one->Print(&schema);
-//			two->Print(&schema);
-
-
 
 		ComparisonEngine *compare;
 
@@ -127,32 +108,5 @@ public:
 	
 
 };
-
-
-/*class sort_func2{
-private:
-	OrderMaker *sort_order;
-public:
-	sort_func(OrderMaker *order){
-		this->sort_order = order;
-	}
-	sort_func(){};
-	bool operator()(rwrap *one,rwrap *two) const{
-		ComparisonEngine *compare;
-		if(compare->Compare(&(one->rec),&(two->rec),this->sort_order)<0){
-			return true;
-		}
-		else{
-			return false;
-		}
-	}
-	
-};*/
-
-
-
-
-
-
 
 #endif

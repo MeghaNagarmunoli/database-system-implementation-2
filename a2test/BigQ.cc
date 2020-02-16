@@ -40,51 +40,51 @@ void BigQ::sort_run(Page *p, int num_recs,File& new_file,int& gp_index,OrderMake
 
 	//DEBUG
 
-	int k = 0,err = 0,succ = 0;
+	// int k = 0,err = 0,succ = 0;
 
 
-	Record *last = NULL, *prev = NULL;
+	// Record *last = NULL, *prev = NULL;
 
 
-	ComparisonEngine ceng;
-	while (k < num_recs) {
+	// ComparisonEngine ceng;
+	// while (k < num_recs) {
 
 
-		prev = last;
+	// 	prev = last;
 
 
-		last = record_Buffer[k];
-
-
-
+	// 	last = record_Buffer[k];
 
 
 
-		if (prev && last) {
-
-
-			if (ceng.Compare (prev, last, sort_order) == 1) {
-
-
-				err++;
-			}
-
-
-			else {
-				succ++;
-
-
-			}
-		}
-
-
-		k++;
-	}
 
 
 
-	cout << "ERROR in sorting this run = " << err << endl;
-	cout << "succ in sorting this run = " << succ << endl;
+	// 	if (prev && last) {
+
+
+	// 		if (ceng.Compare (prev, last, sort_order) == 1) {
+
+
+	// 			err++;
+	// 		}
+
+
+	// 		else {
+	// 			succ++;
+
+
+	// 		}
+	// 	}
+
+
+	// 	k++;
+	// }
+
+
+
+	// cout << "ERROR in sorting this run = " << err << endl;
+	// cout << "succ in sorting this run = " << succ << endl;
 
 
 	
@@ -143,6 +143,36 @@ void BigQ::sort_run(Page *p, int num_recs,File& new_file,int& gp_index,OrderMake
 }
 
 
+
+void BigQ::sortRun(vector<Record*> &records,File& new_file,int& gp_index,OrderMaker *sort_order){
+	
+    sort(records.begin(),records.end(),sort_func(sort_order));
+	int c=0;
+
+	Page *tp = new Page();
+	int pageIsDirty =0;
+
+    for(Record *record : records) {
+		if(tp->Append(record)==0){
+			pageIsDirty =0;
+			new_file.AddPage(tp,(off_t)(gp_index++));
+			tp->EmptyItOut();
+			tp->Append(record);
+			c++;	
+		}
+		else{
+			pageIsDirty =1;
+			c++;
+		}						
+	}
+
+	if(pageIsDirty==1){
+		new_file.AddPage(tp,(off_t)(gp_index++));	
+	}
+	cout<<"G index end "<<gp_index<<"\n";
+	delete tp;
+}
+
 void* BigQ::TPMMS_Phase1(void* arg){
 
 	/*Typecast the arguments
@@ -153,14 +183,16 @@ void* BigQ::TPMMS_Phase1(void* arg){
 	//Create new DBFile object
 	File new_file;
 
-	char f_path[8] = "runfile";
+	char f_path[12] = "runfile.txt";
 	new_file.Open(0,f_path);
 
 	
 	Page *p = new Page[*(args->run_length)]();	
+    Page runPage;
  
 	Record *temporary = new Record();//check mem
 
+    vector <Record*> runVector;
 //	cout << "Created run file "<<*(args->num_runs)<<"\n";
 	
 	int result    =  1;		//integer boolean for checking pipe status
@@ -170,8 +202,54 @@ void* BigQ::TPMMS_Phase1(void* arg){
 	//int r_index[*(args->run_length)];	
 	int num_runs  =  1;		//goes from 1 to n,set to one as the array size is n, else set array size to n+1 to use indexing from 1
 	//r_index[num_runs-1]=1;
+
+    int numPagesWrittenToFile = 0;
 	
 
+    while(args->input->Remove(temporary)){
+
+        Record *copyRecord = new Record;
+        copyRecord->Copy(temporary);
+        if(runPage.Append(temporary)){
+            runVector.push_back(copyRecord);
+             num_recs++;
+        }
+        else if(++p_index == *(args->run_length)){
+
+            //sort
+           sortRun(runVector, new_file, gp_index, args->sort_order);
+
+
+            // TODO: Maintain meta data about records and pages in each run
+            num_runs++;
+
+            p_index = 0;
+            num_recs = 0;
+            //empty it
+            runVector.clear();
+
+            runPage.EmptyItOut();
+            runPage.Append(temporary);
+            runVector.push_back(copyRecord);
+            num_recs++;
+        } else {
+            runPage.EmptyItOut();
+            runPage.Append(temporary);
+            runVector.push_back(copyRecord);
+             num_recs++;
+        }
+       
+
+    }
+      //sort
+    sortRun(runVector, new_file, gp_index, args->sort_order);
+   //  sort(runVector.begin(),runVector.end(),sort_func(args->sort_order));
+    //Schema ms ("catalog","nation");
+     //       for(Record *i:runVector){
+     //           i->Print(&ms);
+     ///       }
+
+/*
 	//***check resets of indexes
 	while(result!=0){ // till input pipe is empty
 	
@@ -242,14 +320,14 @@ void* BigQ::TPMMS_Phase1(void* arg){
 			//cout<<"Count: "<<count<<"";
 			/*for(int i=0;i<count;i++){
 				cout<<"Printing record: "<<i<<" Count: "<<count<<"\n";
-				(*(record_Buffer+i))->Print(&schema);
-			}*/
+				(*(record_Buffer+i))->Print(&schema);0
+comment it later			}
 
 
 		}
 		
 
-	}
+	}*/
 
 //	cout<<"All files opened \n";
 
@@ -384,7 +462,6 @@ void* BigQ::TPMMS_Phase1(void* arg){
 		pQueue.pop();
 	} 
 }
-
 
 
 BigQ :: BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen) {

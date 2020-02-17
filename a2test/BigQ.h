@@ -35,8 +35,7 @@ class BigQ {
 
 	typedef struct args_phase1_struct args_phase1_struct;
 
-	static void* TPMMS_Phase1(void* arg);
-	void* TPMMS_Phase2(void* arg);
+	static void* SortAndMerge(void* arg);
 	static void quicksort(vector<Record> &rb, int left, int right,OrderMaker &sortorder);
 	static void sort_run(Page*,int,File&,int&,OrderMaker *);
 	static void sortRun(vector<Record*>&, File& ,int& gpindex,OrderMaker*);

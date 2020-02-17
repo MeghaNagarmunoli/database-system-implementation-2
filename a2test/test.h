@@ -39,7 +39,7 @@ private:
 public:
 	relation (char *_name, Schema *_schema, char *_prefix) :
 		rname (_name), rschema (_schema), prefix (_prefix) {
-		sprintf (rpath, "%s%s.bin.bigq", prefix, rname);
+		sprintf (rpath, "%s%s.bin", prefix, rname);
 	}
 	char* name () { return rname; }
 	char* path () { return rpath; }

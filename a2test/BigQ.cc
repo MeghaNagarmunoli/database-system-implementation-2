@@ -1,28 +1,4 @@
 #include "BigQ.h"
-#include <algorithm>
-
-void BigQ::sortRun(vector<Record*> &records,File& new_file,int& gp_index,OrderMaker *sort_order){
-	
-    sort(records.begin(),records.end(),sort_func(sort_order));
-	int c=0;
-
-	Page *tp = new Page();
-    for(Record *record : records) {
-		if(tp->Append(record)==0){
-			new_file.AddPage(tp,(off_t)(gp_index++));
-			tp->EmptyItOut();
-			tp->Append(record);
-			c++;	
-		}
-		else{
-			c++;
-		}						
-	}
-
-	new_file.AddPage(tp,(off_t)(gp_index++));	
-	cout<<"G index end "<<gp_index<<"\n";
-	delete tp;
-}
 
 void BigQ::createFileWithRuns(Pipe* inputPipe, vector<pair <int,int>> &runMetadata,  int &numRuns, int *runLength, OrderMaker *sort_order, File &new_file) {
 	int pageIndex   =  0;		//pageindex to write at
@@ -97,7 +73,7 @@ void* BigQ::SortAndMerge(void* arg){
 	int num_runs  =  1;		//goes from 1 to n,set to one as the array size is n, else set array size to n+1 to use indexing from 1
 	vector<pair <int,int>> runMetadata;
 
-   createFileWithRuns(args->input, runMetadata, num_runs, args->run_length,args->sort_order, new_file);
+    createFileWithRuns(args->input, runMetadata, num_runs, args->run_length,args->sort_order, new_file);
 
 	new_file.Open(1,f_path);
 

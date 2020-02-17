@@ -12,7 +12,7 @@
 using namespace std;
 
 // stub file .. replace it with your own DBFile.cc
-
+int calledTimes = 0;
 DBFile::DBFile () {
     totalPageCount = 0;
     currentPage = 0;
@@ -33,7 +33,7 @@ int DBFile::Create (const char *f_path, fType f_type, void *startup) {
         copy(f_path, f_path + strlen(f_path), b);
         filepath = b;
         file.Open(0, filepath);
-        file.Close();
+        //file.Close();
         return 1;
     } else {
         cerr<<"Only heap file type supported!!!"<<endl;
@@ -42,27 +42,27 @@ int DBFile::Create (const char *f_path, fType f_type, void *startup) {
 }
 
 void DBFile::Load (Schema &f_schema, const char *loadpath) {
-    if(filepath == NULL || filepath[0] == '\0') {
-        cerr<<"First call create() and then load()."<<endl;
-        return;
-    }
+    // if(filepath == NULL || filepath[0] == '\0') {
+    //     cerr<<"First call create() and then load()."<<endl;
+    //     return;
+    // }
 
-    FILE *tableFile = fopen(loadpath,"r");
-    if(tableFile == NULL) {
-        cerr<<"Failed to open file at loadpath:"<<loadpath<<" . Maybe the file doesn't exist at that location!!!"<<endl;
-        return;
-    }
-    Record temp;
-    page.EmptyItOut();
-    file.Open(1, filepath);
-    off_t numberOfrecords = 0;
-    while (temp.SuckNextRecord (&f_schema, tableFile)) {
-        numberOfrecords++;
-        Add(temp);
-    }
-    file.AddPage(&page, totalPageCount);
-    page.EmptyItOut();
-    cout<<"Number of records loaded :"<<numberOfrecords<<endl;
+    // FILE *tableFile = fopen(loadpath,"r");
+    // if(tableFile == NULL) {
+    //     cerr<<"Failed to open file at loadpath:"<<loadpath<<" . Maybe the file doesn't exist at that location!!!"<<endl;
+    //     return;
+    // }
+    // Record temp;
+    // page.EmptyItOut();
+    // file.Open(1, filepath);
+    // off_t numberOfrecords = 0;
+    // while (temp.SuckNextRecord (&f_schema, tableFile)) {
+    //     numberOfrecords++;
+    //     Add(temp);
+    // }
+    // file.AddPage(&page, totalPageCount);
+    // page.EmptyItOut();
+    // cout<<"Number of records loaded :"<<numberOfrecords<<endl;
 }
 
 int DBFile::Open (const char *f_path) {
@@ -86,6 +86,7 @@ void DBFile::MoveFirst () {
 }
 
 int DBFile::Close () {
+    cout<<"Closing the file"<<totalPageCount<<endl;
     file.Close();
     return 1;
 }
@@ -100,6 +101,12 @@ void DBFile::Add (Record &rec) {
             exit(0);
         }
     }
+}
+
+void DBFile::HopefullyHarmless() {
+    cout<<"Page count :"<<totalPageCount<<endl;
+    file.AddPage(&page, totalPageCount);
+    page.EmptyItOut();
 
 }
 

@@ -40,7 +40,9 @@ void *consumer (void *arg) {
 
 	if (t->write) {
 		sprintf (outfile, "%s.bigq", rel->path ());
+		cout <<  "This is the output file location " <<outfile << endl;
 		dbfile.Create (outfile, heap, NULL);
+		dbfile.Open(outfile);
 	}
 
 	int err = 0;
@@ -74,6 +76,7 @@ void *consumer (void *arg) {
 			dbfile.Add (*last);
 		}
 		cerr << " consumer: recs removed written out as heap DBFile at " << outfile << endl;
+		dbfile.HopefullyHarmless();
 		dbfile.Close ();
 	}
 	cerr << " consumer: " << (i - err) << " recs out of " << i << " recs in sorted order \n";

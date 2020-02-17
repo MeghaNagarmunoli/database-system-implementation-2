@@ -389,7 +389,7 @@ comment it later			}
 
 		index[k][start] =  runPair.first;
 		index[k][end]   = runPair.second;
-        //cout<<"Run index:"<<k<<" start -"<<index[k][start]<<" end-"<<index[k][end]<<endl;
+        cout<<"Run index:"<<k<<" start -"<<index[k][start]<<" end-"<<index[k][end]<<endl;
         k++;
 	}
 

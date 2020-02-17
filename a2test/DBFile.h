@@ -30,6 +30,7 @@ public:
 
 	void MoveFirst ();
 	void Add (Record &addme);
+	void HopefullyHarmless();
 	int GetNext (Record &fetchme);
 	int GetNext (Record &fetchme, CNF &cnf, Record &literal);
 

@@ -24,6 +24,56 @@ void BigQ::sortRun(vector<Record*> &records,File& new_file,int& gp_index,OrderMa
 	delete tp;
 }
 
+void BigQ::createFileWithRuns(Pipe* inputPipe, vector<pair <int,int>> &runMetadata,  int &numRuns, int *runLength, OrderMaker *sort_order, File &new_file) {
+	int pageIndex   =  0;		//pageindex to write at
+	int globalPageIndex   =  1;
+	int globalPageIndexStart = 1;	
+	int numRecords  =  0;		//no of records 
+	vector <Record*> runVector;
+	Page runPage;
+	Record *temporary = new Record();
+    while(inputPipe->Remove(temporary)){
+
+        Record *copyRecord = new Record;
+        copyRecord->Copy(temporary);
+        if(runPage.Append(temporary)){
+            runVector.push_back(copyRecord);
+            numRecords++;
+        }
+        else if(++pageIndex == *runLength){
+
+            //sort
+            sortRun(runVector, new_file, globalPageIndex, sort_order);
+            // maintian the metadata for page and run
+            runMetadata.push_back(make_pair(globalPageIndexStart,globalPageIndex-1));
+            globalPageIndexStart = globalPageIndex;
+
+            // update counters
+            numRuns++;
+            pageIndex = 0;
+            numRecords = 0;
+            //empty it
+            runVector.clear();
+            runPage.EmptyItOut();
+            runPage.Append(temporary);
+            runVector.push_back(copyRecord);
+            numRecords++;
+        } else {
+            runPage.EmptyItOut();
+            runPage.Append(temporary);
+            runVector.push_back(copyRecord);
+            numRecords++;
+        }
+    }
+    //sort
+    sortRun(runVector, new_file, globalPageIndex, sort_order);
+    runMetadata.push_back(make_pair(globalPageIndexStart,globalPageIndex-1));
+	new_file.Close();
+	cout<<"Number of records" << numRecords<<endl;
+	delete temporary;
+}
+
+
 void* BigQ::SortAndMerge(void* arg){
 
 	/*Typecast the arguments
@@ -44,62 +94,11 @@ void* BigQ::SortAndMerge(void* arg){
 	Record *temporary = new Record();//check mem
 
     vector <Record*> runVector;
-//	cout << "Created run file "<<*(args->num_runs)<<"\n";
-	
-	int result    =  1;		//integer boolean for checking pipe status
-	int num_recs  =  0;		//no of records 
-	int p_index   =  0;		//pageindex to write at
-	int gp_index   =  1;		//global page index for file
-	//int r_index[*(args->run_length)];	
 	int num_runs  =  1;		//goes from 1 to n,set to one as the array size is n, else set array size to n+1 to use indexing from 1
-	//r_index[num_runs-1]=1;
-    int gp_index_start = 1;
-    int numPagesWrittenToFile = 0;
 	vector<pair <int,int>> runMetadata;
 
-    while(args->input->Remove(temporary)){
+   createFileWithRuns(args->input, runMetadata, num_runs, args->run_length,args->sort_order, new_file);
 
-        Record *copyRecord = new Record;
-        copyRecord->Copy(temporary);
-        if(runPage.Append(temporary)){
-            runVector.push_back(copyRecord);
-             num_recs++;
-        }
-        else if(++p_index == *(args->run_length)){
-
-            //sort
-            sortRun(runVector, new_file, gp_index, args->sort_order);
-            // maintian the metadata for page and run
-            runMetadata.push_back(make_pair(gp_index_start,gp_index-1));
-            gp_index_start = gp_index;
-
-
-
-            // update counters
-            num_runs++;
-            p_index = 0;
-            num_recs = 0;
-            //empty it
-            runVector.clear();
-            runPage.EmptyItOut();
-            runPage.Append(temporary);
-            runVector.push_back(copyRecord);
-            num_recs++;
-        } else {
-            runPage.EmptyItOut();
-            runPage.Append(temporary);
-            runVector.push_back(copyRecord);
-             num_recs++;
-        }
-    }
-      //sort
-    sortRun(runVector, new_file, gp_index, args->sort_order);
-    runMetadata.push_back(make_pair(gp_index_start,gp_index-1));
-
-
-	delete temporary;
-
-	new_file.Close();
 	new_file.Open(1,f_path);
 
 	priority_queue<rwrap* , vector<rwrap*> , sort_func> pQueue (sort_func(args->sort_order));

@@ -37,7 +37,7 @@ class BigQ {
 
 	static void* SortAndMerge(void* arg);
 	static void quicksort(vector<Record> &rb, int left, int right,OrderMaker &sortorder);
-	static void sort_run(Page*,int,File&,int&,OrderMaker *);
+	static void createFileWithRuns(Pipe*, vector<pair <int,int>>&, int&, int*, OrderMaker*, File&);
 	static void sortRun(vector<Record*>&, File& ,int& gpindex,OrderMaker*);
 //	static bool sort_func(Record &,Record &,OrderMaker &sortorder);	
 	/*Deprecated: Replaced by DBFile , no need for indexing

@@ -6,8 +6,8 @@ tag = -i
 ifdef linux
 tag = -n
 endif
-gtest.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o y.tab.o lex.yy.o gtest.o 
-	$(CC) -o gtest.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o  DBFile.o y.tab.o lex.yy.o  gtest.o -lfl -lpthread -lgtest
+gtest.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o Pipe.o y.tab.o lex.yy.o gtest.o
+	$(CC) -o gtest.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o Pipe.o y.tab.o lex.yy.o gtest.o -lfl -lpthread -lgtest
 
 test.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o Pipe.o y.tab.o lex.yy.o test.o
 	$(CC) -o test.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o Pipe.o y.tab.o lex.yy.o test.o -lfl -lpthread

@@ -184,6 +184,7 @@ void* BigQ::SortAndMerge(void* arg){
 		args->output->Insert(&((pQueue.top())->rec));
 		pQueue.pop();
 	} 
+	remove(f_path);
 }
 
 

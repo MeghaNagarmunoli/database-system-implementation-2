@@ -79,7 +79,7 @@ void *consumer (void *arg) {
 		dbfile.HopefullyHarmless();
 		dbfile.Close ();
 	}
-	cerr << " consumer: " << (i - err) << " recs out of " << i << " recs in sorted order \n";
+	cout << " consumer: " << (i - err) << " recs out of " << i << " recs in sorted order \n";
 	if (err) {
 		cerr << " consumer: " <<  err << " recs failed sorted order test \n" << endl;
 	}
@@ -99,7 +99,7 @@ void test1 (int option, int runlen) {
 	// thread to dump data into the input pipe (for BigQ's consumption)
 	pthread_t thread1;
 	pthread_create (&thread1, NULL, producer, (void *)&input);
-	usleep(2000);
+	//usleep(2000);
 
 	// thread to read sorted data from output pipe (dumped by BigQ)
 	pthread_t thread2;

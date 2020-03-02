@@ -13,7 +13,7 @@ void *producer (void *arg) {
 	DBFile dbfile;
 	dbfile.Open (rel->path ());
 	cout << " producer: opened DBFile " << rel->path () << endl;
-	dbfile.MoveFirst ();
+	dbfile.MoveFirst();
 
 	while (dbfile.GetNext (temp) == 1) {
 		counter += 1;
@@ -76,8 +76,9 @@ void *consumer (void *arg) {
 			dbfile.Add (*last);
 		}
 		cerr << " consumer: recs removed written out as heap DBFile at " << outfile << endl;
-		dbfile.HopefullyHarmless();
+		//dbfile.HopefullyHarmless();
 		dbfile.Close ();
+
 	}
 	cout << " consumer: " << (i - err) << " recs out of " << i << " recs in sorted order \n";
 	if (err) {

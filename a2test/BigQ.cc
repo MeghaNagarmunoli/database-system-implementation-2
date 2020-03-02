@@ -120,18 +120,10 @@ void* BigQ::SortAndMerge(void* arg){
 
 		index[k][start] =  runPair.first;
 		index[k][end]   = runPair.second;
-        cout<<"Run index:"<<k<<" start -"<<index[k][start]<<" end-"<<index[k][end]<<endl;
         k++;
 	}
 
-  
-		
-	for(int i=0;i<num_runs;i++){
-
-		cout<<"run "<<i<<" start "<<index[i][start]<<" end "<<index[i][end]<<"\n";	
-	
-	}	
-
+ 
 	cout<<"Begin Merge\n";
 	while(flags!=0){
 
@@ -156,8 +148,6 @@ void* BigQ::SortAndMerge(void* arg){
 					fin[next]=1;				
 				}
 				else{
-
-					cout<<"Read at index"<<index[next][start]+c_i[next]<<"\n";
 
 					new_file.GetPage(buf+next,(off_t)(index[next][start]+c_i[next]));
 

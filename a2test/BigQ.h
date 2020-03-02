@@ -96,11 +96,6 @@ class BigQ {
 	static void quicksort(vector<Record> &rb, int left, int right,OrderMaker &sortorder);
 	static void createFileWithRuns(Pipe*, vector<pair <int,int>>&, int&, int*, OrderMaker*, File&);
 	
-//	static bool sort_func(Record &,Record &,OrderMaker &sortorder);	
-	/*Deprecated: Replaced by DBFile , no need for indexing
-	//Record *recordBuff;
-	//int pageLength = 0;//no of recrods per page
-	//Page *buffer;*/
 	
 
 public:
@@ -120,9 +115,9 @@ public:
 				c++;
 			}						
 		}
-		cout<<"G index end "<<gp_index<<"\n";
+		//cout<<"G index end "<<gp_index<<"\n";
 		new_file.AddPage(&page,(off_t)(gp_index++));	
-		cout<<"G index end "<<gp_index<<"\n";
+		//cout<<"G index end "<<gp_index<<"\n";
 		//delete tp;
 	}
 

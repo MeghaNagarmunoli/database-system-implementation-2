@@ -11,7 +11,10 @@
         "algorithm": "cpp",
         "typeinfo": "cpp",
         "streambuf": "cpp",
-        "type_traits": "cpp"
+        "type_traits": "cpp",
+        "string": "cpp",
+        "iosfwd": "cpp",
+        "string_view": "cpp"
     },
     "editor.tokenColorCustomizations": {
         "textMateRules": [

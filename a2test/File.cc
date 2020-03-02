@@ -66,7 +66,7 @@ int Page :: GetFirst (Record *firstOne) {
 
 int Page :: Append (Record *addMe) {
 	char *b = addMe->GetBits();
-	cout << *b;
+	//cout << *b;
 	// first see if we can fit the record
 	if (curSizeInBytes + ((int *) b)[0] > PAGE_SIZE) {
 		return 0;
@@ -220,7 +220,7 @@ void File :: AddPage (Page *addMe, off_t whichPage) {
 	addMe->ToBinary (bits);
 	lseek (myFilDes, PAGE_SIZE * whichPage, SEEK_SET);
 	write (myFilDes, bits, PAGE_SIZE);
-	cerr << " File: curLength " << curLength << " whichPage " << whichPage << endl;
+	//cerr << " File: curLength " << curLength << " whichPage " << whichPage << endl;
 	delete [] bits;
 #ifdef F_DEBUG
 	cerr << " File: curLength " << curLength << " whichPage " << whichPage << endl;

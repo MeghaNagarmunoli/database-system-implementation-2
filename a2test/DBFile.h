@@ -7,18 +7,14 @@
 #include "File.h"
 #include "Comparison.h"
 #include "ComparisonEngine.h"
-
-typedef enum {heap, sorted, tree} fType;
+#include "GenericDBFile.h"
 
 // stub DBFile header..replace it with your own DBFile.h 
 
-class DBFile {
-	char *filepath; 
-	File file;
-    off_t totalPageCount;
-    off_t currentPage;
-	Page page;
-	ComparisonEngine comparator;
+class DBFile{
+
+	GenericDBFile *myInternalDB; 
+
 public:
 	DBFile (); 
 	~DBFile (); 
@@ -30,7 +26,7 @@ public:
 
 	void MoveFirst ();
 	void Add (Record &addme);
-	void HopefullyHarmless();
+	//void HopefullyHarmless();
 	int GetNext (Record &fetchme);
 	int GetNext (Record &fetchme, CNF &cnf, Record &literal);
 

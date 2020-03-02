@@ -1,0 +1,69 @@
+,.tear[==========] Running 4 tests from 4 test cases.
+[----------] Global test environment set-up.
+[----------] 1 test from test_sorting_for_a_run
+[ RUN      ] test_sorting_for_a_run.testsorting
+Running Test
+./testdata/part.bin
+
+ specify sort ordering (when done press ctrl-D):
+	  
+NumAtts =     1
+  0:     0 Int
+Running Test 3
+./testdata/test.bin
+Running Test 4
+Number of errors : 0
+[       OK ] test_sorting_for_a_run.testsorting (2 ms)
+[----------] 1 test from test_sorting_for_a_run (2 ms total)
+
+[----------] 1 test from test_sorting_for_a_run_1
+[ RUN      ] test_sorting_for_a_run_1.testingsort
+Running Test 1
+./testdata/nation.bin
+
+ specify sort ordering (when done press ctrl-D):
+	  
+NumAtts =     1
+  0:     2 Int
+Running Test 3
+./testdata/test.bin
+Running Test 4
+Number of errors : 0
+[       OK ] test_sorting_for_a_run_1.testingsort (0 ms)
+[----------] 1 test from test_sorting_for_a_run_1 (0 ms total)
+
+[----------] 1 test from test_integration1
+[ RUN      ] test_integration1.intergration_test
+
+ specify sort ordering (when done press ctrl-D):
+	  
+NumAtts =     1
+  0:     2 Int
+./testdata/nation.bin
+ producer: opened DBFile ./testdata/nation.bin
+ producer: inserted 25 recs into the pipe
+Number of records25
+Setting Indexes
+Begin Merge
+[       OK ] test_integration1.intergration_test (1 ms)
+[----------] 1 test from test_integration1 (1 ms total)
+
+[----------] 1 test from test_integration2
+[ RUN      ] test_integration2.intergration_test
+
+ specify sort ordering (when done press ctrl-D):
+	  
+NumAtts =     1
+  0:     1 Int
+./testdata/lineitem.bin
+ producer: opened DBFile ./testdata/lineitem.bin
+ producer: inserted 60175 recs into the pipe
+Number of records1660
+Setting Indexes
+Begin Merge
+[       OK ] test_integration2.intergration_test (157 ms)
+[----------] 1 test from test_integration2 (157 ms total)
+
+[----------] Global test environment tear-down
+[==========] 4 tests from 4 test cases ran. (160 ms total)
+[  PASSED  ] 4 tests.

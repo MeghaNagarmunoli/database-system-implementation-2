@@ -17,7 +17,7 @@ struct SortInfo { OrderMaker *myOrder; int runLength;
 typedef enum {read, write} Mode; 
 
 class SortedDBFile : public GenericDBFile {
-
+public:
 	char *filepath; 
 	File file;
     off_t totalPageCount;
@@ -30,8 +30,10 @@ class SortedDBFile : public GenericDBFile {
 	Pipe *input; 
 	Pipe *output; 
 	BigQ *bigQ;
+	pthread_t myWorkerThread;
 
-public:
+	bool bigQCreated;
+
 	SortedDBFile (); 
 	~SortedDBFile (); 
 	//void *consumer (void *arg);
@@ -47,6 +49,8 @@ public:
 	int GetNext (Record &fetchme);
 	int GetNext (Record &fetchme, CNF &cnf, Record &literal);
 	//void AddRecordToDiskFile(Record &addme);
+	void MergeData();
+	void AddRecordToDiskFile(File &tempFile, Page &tempPage, Record &rec, int &tempPageCount);
 
 };
 #endif

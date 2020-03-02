@@ -26,44 +26,24 @@ DBFile::~DBFile () {
 }
 
 int DBFile::Create (const char *f_path, fType f_type, void *startup) {
-    cout<<"0"<<endl;
-    // if(f_path == NULL || f_path[0] == '\0') {
-    //     cerr<<"Path to create file is null!!!"<<endl;
-    //     return 0;
-    // }
-    // if(f_type == heap)
-    // {
-    //     char *b = new char[strlen(f_path) + 1]{};
-    //     copy(f_path, f_path + strlen(f_path), b);
-    //     filepath = b;
-    //     file.Open(0, filepath);
-    //     file.Close();
-    //     return 1;
-    // } else {
-    //     cerr<<"Only heap file type supported!!!"<<endl;
-    //     return 0;
-    // } 
-
     ofstream file;
 
     char *b = new char[strlen(f_path) + 5]{};
     copy(f_path, f_path + strlen(f_path), b);
+    //filepath = b;
     char *meta = ".meta";
     char *c = new char[strlen(f_path) + 6]{};
     strcpy(c, f_path);
     strcat(c, meta);
-    cout<<"1"<<endl;
     cout<<c<<endl;
     file.open(c);
     if(file.is_open()) {
-        cout<<"1.1"<<endl;
         if(f_type == heap){
             file << "h\n";
             myInternalDB = new HeapDBFile();
         }
         else if (f_type == sorted)
         {
-            cout<<"2"<<endl;
             file << "s\n";
             myInternalDB = new SortedDBFile();
         }
@@ -109,7 +89,6 @@ int DBFile::Open (const char *f_path) {
     if(myInternalDB == NULL) {
         char *b = new char[strlen(f_path) + 5]{};
         copy(f_path, f_path + strlen(f_path), b);
-        
         // Meta data file operation
         char *meta = ".meta";
         char *c = new char[strlen(f_path) + 6]{};

@@ -9,7 +9,6 @@ int add_data (FILE *src, int numrecs, int &res) {
 	DBFile dbfile;
 	dbfile.Open (rel->path ());
 	Record temp;
-
 	int proc = 0;
 	int xx = 20000;
 	while ((res = temp.SuckNextRecord (rel->schema (), src)) && ++proc < numrecs) {
@@ -17,7 +16,6 @@ int add_data (FILE *src, int numrecs, int &res) {
 		if (proc == xx) cerr << "\t ";
 		if (proc % xx == 0) cerr << ".";
 	}
-
 	dbfile.Close ();
 	return proc;
 }
@@ -47,7 +45,7 @@ void test1 () {
 	char tbl_path[100];
 	sprintf (tbl_path, "%s%s.tbl", tpch_dir, rel->name()); 
 	cout << " input from file : " << tbl_path << endl;
-	
+
 
         FILE *tblfile = fopen (tbl_path, "r");
 

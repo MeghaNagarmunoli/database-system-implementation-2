@@ -16,6 +16,25 @@ using namespace std;
 
 struct threadArgs {Pipe &input; const char *filepath;Schema *mySchema;};
 
+typedef struct{
+  Pipe* inputPipe;
+  Pipe* outputPipe;
+  OrderMaker* sortOrder;
+  int runlen;
+} myWorkerUtil;
+
+void* myWorkerRoutine(void* ptr){
+  myWorkerUtil* myT = (myWorkerUtil*) ptr;
+  // cout << " sorted.myworkerroutine " << myT->runlen << endl; // debug
+  new BigQ(*(myT->inputPipe),*(myT->outputPipe),*(myT->sortOrder),myT->runlen); // the BigQ constructor spawns a thread and waits on
+                                                           //  1. The input pipe to shut down
+                                                           //  2. The TPMMS to start and finish.
+                                                           //  3. The output pipe to be emptied.
+                                                           // 1 won't happen till switchToReading(). Hence, we need to put
+                                                           // the constructor in its own queue right now so it doesn't
+                                                           // block Sorted.cc
+  return 0; // http:// stackoverflow.com/a/5761837: Pthreads departs from the standard unix return code of -1 on error convention. It returns 0 on success and a positive integer code on error.
+}
 // stub file .. replace it with your own DBFile.cc
 void *producer (void *arg) {
     threadArgs* inputArgs = (threadArgs*) arg;
@@ -74,10 +93,11 @@ SortedDBFile::SortedDBFile () {
     buffsz = 100;
     Pipe input(buffsz);
     Pipe output(buffsz);
+    bigQCreated  =false;
 }
 
 SortedDBFile::~SortedDBFile () {
-    delete(filepath);
+    //delete(filepath);
 }
 int SortedDBFile::Create (const char *f_path, fType f_type, void *startup) {
     if(f_path == NULL || f_path[0] == '\0') {
@@ -101,6 +121,7 @@ int SortedDBFile::Create (const char *f_path, fType f_type, void *startup) {
     char *b = new char[strlen(f_path) + 1]{};
     copy(f_path, f_path + strlen(f_path), b);
     filepath = b;
+    cout<<"File path create"<<filepath<<endl;
     file.Open(0, filepath);
     file.Close();
     return 1;
@@ -171,23 +192,31 @@ int SortedDBFile::Open (const char *f_path) {
 
     char *path = new char[strlen(f_path) + 1]{};
     copy(f_path, f_path + strlen(f_path), path);
+    filepath = path;
     cout<<f_path<<endl;
     file.Open(1, path);
-    delete(path);
+    //delete(path);
     return 1;
 }
 
 void SortedDBFile::MoveFirst () {
     if(dbFileMode == write) {
-        mergeData();
+        MergeData();
     } 
     page.EmptyItOut();
-    file.GetPage(&page, 0);
+    //cout<<"Move first"<<endl;
+    if(file.GetLength()>0) {
+        file.GetPage(&page, 0);
+    }
     currentPage = 0;
 }
 int SortedDBFile::Close () {
-    // file.Close();
-    // return 1;
+    if(dbFileMode == write) {
+        MergeData();
+    }
+    file.Close();
+    bigQCreated = false;
+    return 1;
 }
 // void SortedDBFile::AddRecordToDiskFile(Record &rec) {
 //     if (!page.Append(&rec)) {
@@ -202,39 +231,31 @@ int SortedDBFile::Close () {
 // }
 
 void SortedDBFile::Add (Record &rec) {
-    if(dbFileMode == read) {
+    dbFileMode = write;
+    if(!bigQCreated) {
+        bigQCreated= true;
         OrderMaker &orderRef = *(sortInfo->myOrder);
         input = new Pipe(buffsz);
         output = new Pipe(buffsz);
-        bigQ = new BigQ(*input, *output,orderRef, sortInfo->runLength);
+        //bigQ = new BigQ(*input, *output,orderRef, sortInfo->runLength);
+        myWorkerUtil* t = new myWorkerUtil();
+        t->inputPipe = input;
+        t->outputPipe = output;
+        t->sortOrder = &orderRef;
+        t->runlen = sortInfo->runLength;
+
+        // set up bigQ using a separate thread. See comments in
+        // myWorkerRoutine to understand why
+        pthread_create(&myWorkerThread, NULL, myWorkerRoutine, (void*)t);
         dbFileMode = write;
     }
     input->Insert(&rec);
-   
-    // if (!page.Append(&rec)) {
-    //     file.AddPage(&page, totalPageCount);
-    //     totalPageCount++;
-    //     page.EmptyItOut();
-    //     if(!page.Append(&rec)) {
-    //         cout<<"Something wrong happended while adding record to new page";
-    //         exit(0);
-    //     }
-    // }
-
 }
 
-
-
-
-// void DBFile::HopefullyHarmless() {
-//     cout<<"Page count :"<<totalPageCount<<endl;
-//     file.AddPage(&page, totalPageCount);
-//     page.EmptyItOut();
-// }
-
 int SortedDBFile::GetNext (Record &fetchme) {
-    if(dbFileMode == read) {
-        mergeData();
+    if(dbFileMode == write) {
+        MergeData();
+
     }
     totalPageCount = file.GetLength() - 1;
     if (page.GetFirst(&fetchme)) {
@@ -273,31 +294,41 @@ int SortedDBFile::GetNext (Record &fetchme, CNF &cnf, Record &literal) {
     // return 0;
 }
 
-void SortedDBFile::mergeData(){
+void SortedDBFile::MergeData(){
     input->ShutDown();
     dbFileMode = read;
     MoveFirst();
-    Record temp1, temp2;
+    Record fileRecord, pipeRecord;
     ComparisonEngine ceng;
     File tempFile;
     Page tempPage;
     int pageCount = 0;
     char *mergeFileName = "../bin/mergeFile.bin";
+    cout<<mergeFileName<<endl;
     tempFile.Open(0, mergeFileName);
     bool fileEmpty = false;
     bool outputPipeEmpty = false;
-    if(GetNext(temp1) == 1 & output->Remove(&temp2) == 1 ) {
+    if (GetNext(fileRecord) != 1){
+        cout<<"file empty"<<endl;
+        fileEmpty = true;
+    }
+    if (output->Remove(&pipeRecord) != 1){
+        cout<<"pipe empty"<<endl;
+        outputPipeEmpty = true;
+    }
+    if(!(fileEmpty | outputPipeEmpty)) {
+        cout<<"Begin loop"<<endl;
         while (true) {
-            //returns 1 if temp1 is greater
-            if(ceng.Compare (&temp1, &temp2, sortInfo->myOrder) == 1) {
-                AddRecordToDiskFile(tempFile, tempPage, temp2, pageCount);
-                if(output->Remove(&temp2) != 1) {
+            //returns 1 if fileRecord is greater
+            if(ceng.Compare (&fileRecord, &pipeRecord, sortInfo->myOrder) == 1) {
+                AddRecordToDiskFile(tempFile, tempPage, pipeRecord, pageCount);
+                if(output->Remove(&pipeRecord) != 1) {
                     outputPipeEmpty = true;
                     break;
                 }
             } else {
-                AddRecordToDiskFile(tempFile, tempPage, temp1, pageCount);
-                if(GetNext(temp1) != 1) {
+                AddRecordToDiskFile(tempFile, tempPage, fileRecord, pageCount);
+                if(GetNext(fileRecord) != 1) {
                     fileEmpty = true;
                     break;
 
@@ -306,39 +337,59 @@ void SortedDBFile::mergeData(){
             
         }
     }
-    if(fileEmpty) {
-        while(output->Remove(&temp2)) {
-            AddRecordToDiskFile(tempFile, tempPage, temp2, pageCount);
+    int count = 1;
+    Schema mySchema("catalog", "nation");
+    if(!outputPipeEmpty) {
+        cout<<"writing new record ********* ";
+        AddRecordToDiskFile(tempFile, tempPage, pipeRecord, pageCount);
+        while(output->Remove(&pipeRecord)) {
+            count ++;
+            cout<<"writing new record"<<count<<endl;
+            AddRecordToDiskFile(tempFile, tempPage, pipeRecord, pageCount);
         }
-        outputPipeEmpty = true;
+        //outputPipeEmpty = true;
     }
-    if(outputPipeEmpty) {
-        while(GetNext(temp1)) {
-            AddRecordToDiskFile(tempFile, tempPage, temp1, pageCount);
+    if(!fileEmpty) {
+        cout<<"writing new record in file empty";
+        AddRecordToDiskFile(tempFile, tempPage, fileRecord, pageCount);
+        while(GetNext(fileRecord)) {
+            count++;
+            cout<<"writing new record in file empty"<<count<<endl;
+            fileRecord.Print(&mySchema);
+            AddRecordToDiskFile(tempFile, tempPage, fileRecord, pageCount);
         }
-        fileEmpty = true;
+        //fileEmpty = true;
     }
-
-    tempFile.AddPage(&tempPage, totalPageCount);
+    //cout<<filepath<<endl;
+    //cout<<mergeFileName<<endl;
+    tempFile.AddPage(&tempPage, pageCount);
 
     //Now delete the original file and rename our merged file to original file.
-    if (rename(filepath, mergeFileName) != 0)
-		cerr<<"Error moving file"<<endl;
+    Close();
+    //file.Close();
+    
+    //cout<<mergeFileName<<endl;
+    remove(filepath);
+    cout<<"File path:"<<filepath<<endl;
+    if (rename(mergeFileName, filepath) != 0)
+		cout<<"Error moving file"<<endl;
 	else
     {
-        delete(mergeFileName);
         cout << "File moved successfully"<<endl;
+        tempFile.Close(); // TODO: delete the file later
+        remove(mergeFileName);
+        // Reinitialize the class variables
+        file.Open(1, filepath);
+        page.EmptyItOut();
+        cout<<"New File length :"<<file.GetLength()<<endl;
+        //file.GetPage(&page, 0);
+        totalPageCount = file.GetLength();
+        currentPage = 0;
     }
-    // Reinitialize the class variables
-    file.Open(1, filepath);
-    page.EmptyItOut();
-    file.GetPage(&page, 0);
-    totalPageCount = pageCount;
-    currentPage = 0;
 		
 }
 
-void AddRecordToDiskFile(File &tempFile, Page &tempPage, Record &rec, int &tempPageCount) {
+void SortedDBFile::AddRecordToDiskFile(File &tempFile, Page &tempPage, Record &rec, int &tempPageCount) {
     if (!tempPage.Append(&rec)) {
         tempFile.AddPage(&tempPage, tempPageCount);
         tempPageCount++;
@@ -348,4 +399,5 @@ void AddRecordToDiskFile(File &tempFile, Page &tempPage, Record &rec, int &tempP
             exit(0);
         }
     }
+    //cout<<"Record added"<<endl;
 }

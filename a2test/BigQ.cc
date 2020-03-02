@@ -8,8 +8,11 @@ void BigQ::createFileWithRuns(Pipe* inputPipe, vector<pair <int,int>> &runMetada
 	vector <Record*> runVector;
 	Page runPage;
 	Record *temporary = new Record();
+	cout<<"numrecords before loop : "<<numRecords<<endl;
+	Schema mySchema("catalog","nation");
     while(inputPipe->Remove(temporary)){
-
+		temporary->Print(&mySchema);
+		//cout<<"numrecords "<<numRecords<<endl;
         Record *copyRecord = new Record;
         copyRecord->Copy(temporary);
         if(runPage.Append(temporary)){
@@ -187,7 +190,7 @@ BigQ :: BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen) {
 	args_phase1.sort_order = &sortorder;
 	args_phase1.run_length = &runlen;
 	
-	sortorder.Print();
+	//sortorder.Print();
 	
 	pthread_create (&worker, NULL, &BigQ::SortAndMerge , (void *)&args_phase1);
 

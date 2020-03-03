@@ -16,6 +16,9 @@ int add_data (FILE *src, int numrecs, int &res) {
 		if (proc == xx) cerr << "\t ";
 		if (proc % xx == 0) cerr << ".";
 	}
+	if(res)
+		dbfile.Add (temp);
+	cout<<"Proc"<<proc<<endl;
 	dbfile.Close ();
 	return proc;
 }
@@ -62,7 +65,8 @@ void test1 () {
 			cin >> x;
 		}
 		if (x < 3) {
-			proc = add_data (tblfile,lrand48()%(int)pow(1e3,x)+(x-1)*1000, res);
+			proc = add_data (tblfile,10, res);
+			//proc = add_data (tblfile,lrand48()%(int)pow(1e3,x)+(x-1)*1000, res);
 			tot += proc;
 			if (proc) 
 				cout << "\n\t added " << proc << " recs..so far " << tot << endl;
@@ -114,7 +118,7 @@ void test3 () {
 
 	int cnt = 0;
 	cerr << "\t";
-	
+
 	while (dbfile.GetNext (temp, cnf, literal) && ++cnt) {
 		temp.Print (rel->schema());
 		cout<<"Count"<<cnt<<endl;

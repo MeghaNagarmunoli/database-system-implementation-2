@@ -14,7 +14,7 @@
 struct SortInfo { OrderMaker *myOrder; int runLength;
 };
 
-typedef enum {read, write} Mode; 
+typedef enum {readMode, writeMode} Mode; 
 
 class SortedDBFile : public GenericDBFile {
 public:
@@ -30,11 +30,17 @@ public:
 	Pipe *input; 
 	Pipe *output; 
 	BigQ *bigQ;
+	Record *recordCursor;
 	pthread_t myWorkerThread;
-
+	// Index of page (in file) currently in memory
+	off_t pageIndex;
+	// Page has less records than disk
+	bool dirtyRead;
+	// Page has more records than the disk
+	bool dirtyWrite;
 	bool bigQCreated;
 	bool getNextCalledBefore;
-	OrderMaker* queryOrder; 
+	OrderMaker* queryOM; 
 	// OrderMaker myQueryOrder; 
 	// OrderMaker mySortOrder;  
 	// Record* pointerToLiteral;
@@ -45,7 +51,7 @@ public:
 	int Create (const char *fpath, fType file_type, void *startup);
 	int Open (const char *fpath);
 	int Close ();
-
+	void get_next_Record();
 	void Load (Schema &myschema, const char *loadpath);
 	int readOnePage(Record &fetchme);
 

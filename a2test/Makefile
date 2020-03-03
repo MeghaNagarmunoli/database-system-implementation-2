@@ -9,8 +9,12 @@ endif
 gtest.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o Pipe.o y.tab.o lex.yy.o gtest.o
 	$(CC) -o gtest.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o Pipe.o y.tab.o lex.yy.o gtest.o -lfl -lpthread -lgtest
 
-test.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o HeapDBFile.o SortedDBFile.o GenericDBFile.o DBFile.o  Pipe.o y.tab.o lex.yy.o test.o
-	$(CC) -o test.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o HeapDBFile.o SortedDBFile.o GenericDBFile.o  DBFile.o Pipe.o y.tab.o lex.yy.o test.o -lfl -lpthread
+gtest2.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o HeapDBFile.o SortedDBFile.o DBFile.o Pipe.o y.tab.o lex.yy.o gtest2.o
+	$(CC) -o gtest2.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o HeapDBFile.o SortedDBFile.o DBFile.o Pipe.o y.tab.o lex.yy.o gtest2.o -lfl -lpthread -lgtest
+
+
+test.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o HeapDBFile.o SortedDBFile.o DBFile.o  Pipe.o y.tab.o lex.yy.o test.o
+	$(CC) -o test.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o HeapDBFile.o SortedDBFile.o DBFile.o Pipe.o y.tab.o lex.yy.o test.o -lfl -lpthread
 
 test2.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o HeapDBFile.o SortedDBFile.o DBFile.o  Pipe.o y.tab.o lex.yy.o test2.o
 	$(CC) -o test2.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o HeapDBFile.o SortedDBFile.o  DBFile.o Pipe.o y.tab.o lex.yy.o test2.o -lfl -lpthread
@@ -18,13 +22,15 @@ test2.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o HeapD
 
 a1test.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o Pipe.o y.tab.o lex.yy.o a1-test.o
 	$(CC) -o a1test.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o Pipe.o y.tab.o lex.yy.o a1-test.o -lfl
-	
+
+gtest2.o: gtest2.cc
+	$(CC) -g -c gtest2.cc
+
 gtest.o: gtest.cc
 	$(CC) -g -c gtest.cc
-
+		
 test.o: test.cc
 	$(CC) -g -c test.cc
-
 
 test2.o: test2.cc
 	$(CC) -g -c test2.cc

@@ -117,6 +117,42 @@ void OrderMaker :: Print () {
 	}
 }
 
+// print to printHere - added in assignment 2 part 2 so that we can save this information
+// to the meta file
+void OrderMaker :: PrinttoString (char* printHere){
+  sprintf(printHere,"%5d\n", numAtts);
+  for (int i = 0; i < numAtts; i++)
+  {
+    sprintf(printHere,"%s%5d ", printHere, whichAtts[i]);
+    if (whichTypes[i] == Int)
+      sprintf(printHere,"%sInt\n",printHere);
+    else if (whichTypes[i] == Double)
+      sprintf(printHere,"%sDouble\n",printHere);
+    else
+      sprintf(printHere,"%sString\n",printHere);
+  }
+}
+
+// initialize whichAtts and whichTypes once the ordermaker is built. - added in assignment 2 part 2
+// invoked in Sorted.Open
+void OrderMaker :: initOrderMaker(int numAtts, myAtt* myAtts){
+  this->numAtts = numAtts;
+  for(int i=0;i<numAtts;i++){
+    whichAtts[i] = myAtts[i].attNo;
+    whichTypes[i] = myAtts[i].attType;
+  }
+}
+
+// get number of attributes. used in CNF.CreateQueryOrder. - added in assignment 2 part 2
+int OrderMaker :: getNumAtts(){
+  return numAtts;
+}
+
+// get attribute numbers. used in RelOp.GroupBy. - added in assignment 3
+int* OrderMaker :: getWhichAtts(){
+  return whichAtts;
+}
+
 
 
 int CNF :: GetSortOrders (OrderMaker &left, OrderMaker &right) {
@@ -613,6 +649,60 @@ void CNF :: GrowFromParseTree (struct AndList *parseTree, Schema *mySchema,
 
 	remove("sdafdsfFFDSDA");
 	remove("hkljdfgkSDFSDF");
+}
+
+
+// Create a query order - added in assignment 2 part 2
+// The CNF this is called on is the query CNF entered by the user on a sorted file.
+// This function is called from Sorted.GetNext w/ CNF version
+// Arguments:
+// sortOrder is the orderMaker used to create the table (built either when DBFile.Create
+// is called or reconstituted from the metafile when Sorted.Open is called).
+// queryOrder is the OrderMaker that will be built
+int CNF :: createQueryOrder (OrderMaker &sortOrder, OrderMaker &queryOrder) {
+
+  // initialize the size of the OrderMaker
+  queryOrder.numAtts = 0;
+  int numSortAtts = sortOrder.getNumAtts();
+
+  // loop through each attribute in the sorting order and check if it is
+  // present in the query CNF (the CNF this method is called on). If it
+  // is present, we can add it to the query order being built. If it is
+  // not present, STOP IMMEDIATELY!
+  bool stop = false;
+  for (int j = 0; j < numSortAtts && stop==false; j++) {
+    for (int i = 0; i < numAnds; i++) {
+      // if we don't have a disjunction of length one, then it
+      // can't be acceptable for use with a sort ordering
+      if (orLens[i] != 1) {
+        continue;
+      }
+
+      // made it this far, so first verify that it is an equality check
+    //   if (orList[i][0].op != Equals) {
+    //     continue;
+    //   }
+
+      // check that this attribute of the query CNF (the CNF object this method
+      // is being called upon) is also present in the sortOrder
+      if ((orList[i][0].operand1  == Left) &&
+          (orList[i][0].whichAtt1 == sortOrder.whichAtts[j]) &&
+          (orList[i][0].attType   == sortOrder.whichTypes[j])){
+        queryOrder.whichAtts[queryOrder.numAtts] = i;
+        queryOrder.whichTypes[queryOrder.numAtts] = orList[i][0].attType;
+
+        queryOrder.numAtts++;
+        stop = false;
+        break;
+      }
+      else{ // if this attribute of the sortOrder was not present in the query CNF,
+            // STOP IMMEDIATELY
+        stop = true;
+      }
+    }
+  }
+
+  return queryOrder.numAtts;
 }
 
 

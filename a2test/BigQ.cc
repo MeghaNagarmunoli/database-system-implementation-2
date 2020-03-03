@@ -8,11 +8,7 @@ void BigQ::createFileWithRuns(Pipe* inputPipe, vector<pair <int,int>> &runMetada
 	vector <Record*> runVector;
 	Page runPage;
 	Record *temporary = new Record();
-	cout<<"numrecords before loop : "<<numRecords<<endl;
-	Schema mySchema("catalog","nation");
     while(inputPipe->Remove(temporary)){
-		temporary->Print(&mySchema);
-		//cout<<"numrecords "<<numRecords<<endl;
         Record *copyRecord = new Record;
         copyRecord->Copy(temporary);
         if(runPage.Append(temporary)){

@@ -12,8 +12,15 @@
 #include "GenericDBFile.h"
 #include <fstream>
 #include <cstdio>
+#include <sstream>
+#include <cstring>
 using namespace std;
 
+
+bool binarySearchCompare (Record* left,Record* right);
+OrderMaker myQueryOrder; 
+	OrderMaker mySortOrder;  
+	Record* pointerToLiteral;
 struct threadArgs {Pipe &input; const char *filepath;Schema *mySchema;};
 
 typedef struct{
@@ -94,12 +101,14 @@ SortedDBFile::SortedDBFile () {
     Pipe input(buffsz);
     Pipe output(buffsz);
     bigQCreated  =false;
+    getNextCalledBefore = false;
 }
 
 SortedDBFile::~SortedDBFile () {
-    //delete(filepath);
+    delete(filepath);
 }
 int SortedDBFile::Create (const char *f_path, fType f_type, void *startup) {
+    
     if(f_path == NULL || f_path[0] == '\0') {
         cerr<<"Path to create file is null!!!"<<endl;
         return 0;
@@ -111,11 +120,42 @@ int SortedDBFile::Create (const char *f_path, fType f_type, void *startup) {
     strcpy(c, f_path);
     strcat(c, meta);
     // Write the metadata to file
-    FILE *metaSortedFile;
-    metaSortedFile = fopen(c, "w");
-    fwrite(startup, sizeof(struct SortInfo), 1, metaSortedFile);
-    fclose(metaSortedFile);
+
+
+    ofstream metaSortedFile (c);
+   // FILE *metaSortedFile;
+   // metaSortedFile = fopen(c, "w");
     sortInfo = (SortInfo*)startup;
+
+    char orderMakerMetaData[1000]; 
+    sortInfo->myOrder->PrinttoString(orderMakerMetaData);
+    cout<<"Order maker :"<<orderMakerMetaData<<endl;
+
+    if(metaSortedFile.is_open()) {
+        metaSortedFile << sortInfo->runLength <<endl;
+        metaSortedFile << orderMakerMetaData <<endl;       
+    }
+    //fprintf (metaSortedFile, "%s\n",0,sortInfo);
+    //fwrite(orderMakerMetaData, sizeof(struct SortInfo), 1, metaSortedFile);    
+    metaFilefile.Close();
+   
+   
+    // cout<<"Sort Order!!"<<endl;
+    // sortInfo->myOrder->Print();
+    // cout<<"Printed sort order!!!"<<endl;
+    // //FILE *metaSortedFile;
+   
+   
+    // FILE *testFile = fopen(c, "r");
+    // cout<<"File path :"<<c<<endl;
+    // SortInfo s;
+    // fread(&s, sizeof(struct SortInfo), 1, testFile);
+    // cout<<"printing sort order after reading from file"<<endl;
+    // s.myOrder->Print();
+    // cout<<"Printed sort order after reading"<<endl;
+    // fclose(testFile);
+
+    // Testing something end
 
     // Open the disk file.
     char *b = new char[strlen(f_path) + 1]{};
@@ -186,16 +226,79 @@ int SortedDBFile::Open (const char *f_path) {
     char *c = new char[strlen(f_path) + 11]{};
     strcpy(c, f_path);
     strcat(c, meta);
-    FILE *metaSortedFile;
-    metaSortedFile = fopen(c, "r");
-    fread(sortInfo, sizeof(struct SortInfo), 1, metaSortedFile);
 
+    // FILE *metaSortedFile;
+    // cout<<"File path :"<<c<<endl;
+    // metaSortedFile = fopen(c, "r");
+    // sortInfo = new SortInfo();
+    // fread(sortInfo, sizeof(struct SortInfo), 1, metaSortedFile);
+
+    // cout<<"Sort Order"<<(char*)sortInfo->myOrder<<endl;
+    // sortInfo->myOrder->Print();
+    // cout<<"Printed sort order"<<endl;
+    ifstream metaSortedFile (c);
+    SortInfo *s = new SortInfo();
+
+    if (metaSortedFile.is_open())
+    {
+        char* line = new char[1000];
+
+        // ignore first line coz it says "sorted", which we already know
+       // metaSortedFile.getline(line,1000);
+
+        // next line is runlen (only added in final demo)
+        // put it into runlen
+        metaSortedFile.getline(line,1000);
+        string mystringrunlen (line);
+        istringstream bufferrunlen(mystringrunlen);
+        bufferrunlen >> s->runLength;
+
+        // next line is number of attributes
+        // put it into numAtts
+        int numAtts;
+        metaSortedFile.getline(line,1000);
+        string mystring (line);
+        istringstream buffer(mystring);
+        buffer >> numAtts;
+
+        // next lines are att numbers and types e.g.
+        // 1 String
+        // create array to hold our attributes (att nums and types)
+        // we will pass this array to OrderMaker.buildOrderMaker
+        myAtt* myAtts = new myAtt[numAtts];
+        for(int i=0;i<numAtts;i++){
+        metaSortedFile.getline(line,1000);
+        string mystring (line);
+        unsigned found1 = mystring.find_last_of(" ");
+
+        // save att number in array
+        string attNo = mystring.substr(0,found1+1);
+        istringstream buffer(attNo);
+        buffer >> myAtts[i].attNo;
+
+        // save att type in array
+        string attType = mystring.substr(found1+1);
+        if(attType.compare("Int")==0){
+            myAtts[i].attType = Int;
+        }
+        else if(attType.compare("Double")==0){
+            myAtts[i].attType = Double;
+        }
+        else if(attType.compare("String")==0){
+            myAtts[i].attType = String;
+        }
+        }
+        s->myOrder = new OrderMaker();
+        s->myOrder->initOrderMaker(numAtts,myAtts);
+    }
+
+
+    sortInfo = s;
     char *path = new char[strlen(f_path) + 1]{};
     copy(f_path, f_path + strlen(f_path), path);
     filepath = path;
-    cout<<f_path<<endl;
+    cout<<"Bine file location :"<<f_path<<endl;
     file.Open(1, path);
-    //delete(path);
     return 1;
 }
 
@@ -211,11 +314,13 @@ void SortedDBFile::MoveFirst () {
     currentPage = 0;
 }
 int SortedDBFile::Close () {
+    //cout<< "in retrun "<< endl;
     if(dbFileMode == write) {
         MergeData();
     }
     file.Close();
     bigQCreated = false;
+    //cout << "returnnnninnnngg"<<endl;
     return 1;
 }
 // void SortedDBFile::AddRecordToDiskFile(Record &rec) {
@@ -274,24 +379,53 @@ int SortedDBFile::GetNext (Record &fetchme) {
 }
 
 int SortedDBFile::GetNext (Record &fetchme, CNF &cnf, Record &literal) {
-    // Record temp;
-    // totalPageCount = file.GetLength() - 1;
-    // while (currentPage < totalPageCount) {
-    //     if (page.GetFirst(&temp)) {
-    //         if (comparator.Compare(&temp, &literal, &cnf)) {
-    //             fetchme.Consume(&temp);
-    //             return 1;
-    //         }
-    //     } else {
-    //         if (currentPage + 1 < totalPageCount) {
-    //             currentPage++;
-    //             file.GetPage(&page, currentPage);
-    //         } else {
-    //             return 0;
-    //         }
-    //     }
-    // }
-    // return 0;
+    if(dbFileMode == write) {
+        MergeData();
+    }
+    if(!getNextCalledBefore){
+        queryOrder = new OrderMaker();
+        //cout<<"Sort Order"<<(char*)sortInfo->myOrder<<endl;
+        sortInfo->myOrder->Print();
+        //cout<<"Printed sort order"<<endl;
+        cnf.createQueryOrder(*sortInfo->myOrder,*queryOrder);
+
+        if(queryOrder->getNumAtts()==0) { // sortOrder and the CNF the user entered had NOTHING in common.
+                                        // ****************** OR (since assignment 3) ******************
+                                        // the query entered was something like (abc = abc) i.e., both
+                                        // sides of the equation are the same attribute. The intended effect
+                                        // is to simply return ALL the records in the file.
+                                        //
+                                        // No point doing a binary search. Start from first record in file
+                                        // and peform a linear scan (i.e., plain vanilla heap file search
+                                        // behavior).
+        // cout << "sorted.getnext no common attrs. using plain getnext" << endl;
+        return GetNext(fetchme,cnf,literal);
+    }
+    else { // sortOrder and the CNF the user entered had something in common.
+           // Conduct a binary search to get into the ballpark
+      // cout << "sorted.getnext common attrs found. start binary search" << endl;
+      if(BinarySearch(fetchme,*sortInfo->myOrder,literal,*queryOrder)){ // binary search found something in the ballpark
+        // We must now check that the record that was found also satisfies the CNF entered
+        // by the user. Essentially, we're checking that the attributes NOT in the queryOrder
+        // order maker that we constructed (but IN the CNF entered by the user) are satisfied
+        // for this record.
+        getNextCalledBefore = true; // binary search has succeeded once, no need to redo it unless MoveFirst, Add etc are called.
+        ComparisonEngine compEngine;
+        if(compEngine.Compare (&fetchme, &literal, &cnf)){
+          // cout << "sorted.getnext binary search true AND CNF true" << endl;
+          return 1;
+        }
+        else{ // try the next records sequentially
+          // cout << "sorted.getnext binary search true BUT CNF false. trying next recs" << endl;
+          return GetNext(fetchme,cnf,literal);
+        }
+      }
+      else{ // binary search found nothing even remotely in the ballpark
+        // cout << "sorted.getnext binary search failed" << endl;
+        return 0;
+      }
+    }
+}
 }
 
 void SortedDBFile::MergeData(){
@@ -340,22 +474,18 @@ void SortedDBFile::MergeData(){
     int count = 1;
     Schema mySchema("catalog", "nation");
     if(!outputPipeEmpty) {
-        cout<<"writing new record ********* ";
         AddRecordToDiskFile(tempFile, tempPage, pipeRecord, pageCount);
         while(output->Remove(&pipeRecord)) {
             count ++;
-            cout<<"writing new record"<<count<<endl;
             AddRecordToDiskFile(tempFile, tempPage, pipeRecord, pageCount);
         }
         //outputPipeEmpty = true;
     }
     if(!fileEmpty) {
-        cout<<"writing new record in file empty";
         AddRecordToDiskFile(tempFile, tempPage, fileRecord, pageCount);
         while(GetNext(fileRecord)) {
             count++;
-            cout<<"writing new record in file empty"<<count<<endl;
-            fileRecord.Print(&mySchema);
+            //fileRecord.Print(&mySchema);
             AddRecordToDiskFile(tempFile, tempPage, fileRecord, pageCount);
         }
         //fileEmpty = true;
@@ -401,3 +531,182 @@ void SortedDBFile::AddRecordToDiskFile(File &tempFile, Page &tempPage, Record &r
     }
     //cout<<"Record added"<<endl;
 }
+
+int SortedDBFile :: GetNumofRecordPages(){
+    int correctLength = file.GetLength();
+    if(correctLength!=0) 
+        return correctLength - 1;
+    else 
+        return correctLength;
+}
+
+
+int SortedDBFile :: readOnePage(Record &fetchme){
+  //WritePageIfDirty();
+  if(page.GetFirst(&fetchme)==0){                // 0 indicates we have read everything from
+                                                      // this page. So we can fetch the next page,
+                                                      // if there is one.
+    int currNumofRecordPages = GetNumofRecordPages(); // this needs to be calculated anew
+                                                      // every time because there might have
+                                                      // been a write since the last read
+                                                      // (if the page was dirty)
+    if(currentPage < currNumofRecordPages-1){          // currPageNo numbering starts at 0, hence < and not <=
+      currentPage++;
+      // cout << "(Heap.cc) GetNext currPageNo = " << currPageNo << " currNumofRecordPages = " << currNumofRecordPages+1 << endl; // diagnostic
+      file.GetPage(&page,currentPage); // get a new page in preparation for the next call
+      return 0;
+    }
+    else return 2; // we've gone past the end of the file.
+  }
+  else
+    return 1; // we fetched a record successfully
+}
+
+/*------------------------------------------------------------------------------
+ * comparison function used by binary search
+ *----------------------------------------------------------------------------*/
+bool binarySearchCompare (Record* left,Record* right) {
+  ComparisonEngine compEngine;
+  if(right==pointerToLiteral) // the literal was handed in on the right
+    return compEngine.Compare (right, &myQueryOrder, left, &mySortOrder) > 0; // binary_search specs demand that this function return true
+                                                                              // if left should precede right.
+                                                                              // IMPORTANT! queryOrder must be the second (and NOT
+                                                                              // the fourth argument) because it very well may have
+                                                                              // fewer attributes than the sortOrder
+  else // the literal was handed in on the left
+    return compEngine.Compare (left, &myQueryOrder, right, &mySortOrder) < 0; // binary_search specs demand that this function return true if
+                                                                              // if left should precede right.
+                                                                              // IMPORTANT! queryOrder must be the second (and NOT
+                                                                              // the fourth argument) because it very well may have
+                                                                              // fewer attributes than the sortOrder
+}
+
+/*------------------------------------------------------------------------------
+ * added in assignment 2 part 2
+ * called by Sorted.GetNext WITH CNF to perform a binary search on sorted's basefile
+ * this function will search the whole file if need be.
+ * performs a binary search on a page worth of data at a time
+ * Returns:
+ * true: the element we're looking for was found and the pointer has been positioned
+ *       to just after it.
+ * false: the element we're looking for was not found in the file
+ *----------------------------------------------------------------------------*/
+bool SortedDBFile :: BinarySearch(Record& fetchme,OrderMaker& leftOrder,Record& literal,OrderMaker& rightOrder){
+  // cout << "heap.binarysearch entered" << endl;
+  mySortOrder = leftOrder;
+  myQueryOrder = rightOrder;
+  pointerToLiteral = &literal; // used in binarySearchCompare to determine which of the arguments is the literal. This changes every
+                               // time the function is called because of the way STL binary_search is written.
+  ComparisonEngine compEngine;
+  vector<Record*> runOfRecs;
+  Record* temp = new Record();
+  int retval = readOnePage(*temp);
+  Schema myschema("catalog", "nation");
+  bool done = false;
+  while(!done){
+    if(retval==2)
+      done = true; // 2 signifies the end of the entire file. Nothing left to read
+
+    if(retval==1){ // a record was successfully read but the page has more records.
+      runOfRecs.push_back(temp);
+      temp = new Record();
+      retval = readOnePage(*temp); // initiate the next read
+    }
+    else{ // retval == 0 signifies that the end of the page was reached i.e., we now have one page worth of records.
+          // Time to initiate binary search. If binary search returns true, we need to position our record pointer
+          // at the matching element. then, we can linearly search from thereon in GetNext WITH CNF by making
+          // subsequent calls to GetNext WITHOUT CNF.
+      // cout << "heap.binarysearch page finished with recs " << runOfRecs.size() << endl;
+      int compareLiteralAndFront = compEngine.Compare (&literal, &myQueryOrder, runOfRecs.front(), &mySortOrder); // IMPORTANT! queryOrder must be the second (and NOT
+                                                                                                                  // the fourth argument) because it very well may have
+                                                                                                                  // fewer attributes than the sortOrder
+      int compareLiteralAndBack  = compEngine.Compare (&literal, &myQueryOrder, runOfRecs.back(), &mySortOrder); // IMPORTANT! queryOrder must be the second (and NOT
+                                                                                                                 // the fourth argument) because it very well may have
+                                                                                                                 // fewer attributes than the sortOrder
+      // runOfRecs.front()->Print(new Schema("catalog","customer"));
+      // runOfRecs.back()->Print(new Schema("catalog","customer"));
+      if(compareLiteralAndFront==0){ // 0 indicates that the first element is what we're looking for
+        fetchme = *(runOfRecs.front());
+        // We need to position the pointer to just after the first (i.e., the matched) record so that 
+        // successive calls to GetNext WITHOUT CNF can pick up from there.
+        if(!done) currentPage--; // first decrement to undo the increment we made in readOnePage (case for return 0). That increment happens only
+                                // if we're not on the last page, hence the check for done not true
+        file.GetPage(&page,currentPage); // re-read the page we just read (i.e., the one we found the match in)
+        page.GetFirst(&fetchme);
+        while(compEngine.Compare (&literal, &myQueryOrder, &fetchme, &mySortOrder)!=0){ // keep searching till you find Waldo
+                                                                                        // IMPORTANT! queryOrder must be the second (and NOT
+                                                                                        // the fourth argument) because it very well may have
+                                                                                        // fewer attributes than the sortOrder
+          page.GetFirst(&fetchme);
+        }
+        return true;
+      }
+      else if(compareLiteralAndBack==0){ // 0 indicates that the last element is what we're looking for
+        fetchme = *(runOfRecs.back());
+        // the matching record was the last record on the page. the pointer must point to
+        // the start of the NEXT page so successive calls to GetNext WITHOUT CNF can
+        // pick up from there. We've already done this in the readOnePage function (case for return 0),
+        // so nothing else to do.
+        return true;
+      }
+      else if(compareLiteralAndFront<0){ // the very first element of this page is already bigger than what we're looking for
+                                         // hence, the element we're looking for won't be found now or anytime after this
+        return false;
+      }
+      else if(compareLiteralAndBack>0){ // the last element of this page is smaller than what we're looking for.
+                                        // no point looking at this page any more. keep looking on successive pages.
+
+        int vecSize = runOfRecs.size(); // empty the vector first so we start afresh
+        for(int i=0;i<vecSize;i++){
+          delete runOfRecs[i]; // http:// stackoverflow.com/a/4061458
+        }
+        runOfRecs.erase(runOfRecs.begin(),runOfRecs.end());
+
+        if(!done){ // there are more pages to read
+          // cout << "heap.binarysearch page read in next page" << endl;
+          temp = new Record();
+          retval = readOnePage(*temp); // initiate the next read
+        }
+        else // we've reached the end of the file
+          return 0;
+      }
+      else if ((compareLiteralAndFront>0) && (compareLiteralAndBack<0)){ // we're in the correct range of records. there is
+                                                                          // a chance (it's NOT certain; the record we want
+                                                                          // may not even *be* in this file). in any case,
+                                                                          // we need to do a binary search to find out.
+                                                                          // Note that the only advantage of doing a binary search
+                                                                          // IN TERMS OF TIME is that it helps us to very quickly
+                                                                          // determine whether the record we want is even in this file.
+                                                                          // In the event that it is, however, you *will* need to linearly
+                                                                          // scan the page until you get to it so as to position your
+                                                                          // pointer correctly for subsequent calls to GetNext WITHOUT
+                                                                          // CNF. So you will be taking O(n) to do that anyway. Which means
+                                                                          // your binary search didn't really help you to save on that time.
+        if(binary_search(runOfRecs.begin(),runOfRecs.end(),&literal,binarySearchCompare)){ // binary search found the record we were looking for
+          // We need to position the pointer to just after the matched record so that 
+          // successive calls to GetNext WITHOUT CNF can pick up from there.
+          // The matched record is somewhere in this page. Look for it.
+          if(!done) currentPage--; // first decrement to undo the increment we made in readOnePage (case for return 0). That increment happens only
+                                  // if we're not on the last page, hence the check for done not true
+          file.GetPage(&page,currentPage); // re-read the page we just read (i.e., the one we found the match in)
+          page.GetFirst(&fetchme);
+          // fetchme.Print(new Schema("catalog","customer"));
+          while(compEngine.Compare (&literal, &myQueryOrder, &fetchme, &mySortOrder)!=0){ // keep searching till you find Waldo
+                                                                                          // IMPORTANT! queryOrder must be the second (and NOT
+                                                                                          // the fourth argument) because it very well may have
+                                                                                          // fewer attributes than the sortOrder
+            page.GetFirst(&fetchme);
+            // fetchme.Print(new Schema("catalog","customer"));
+          }
+          return true;
+        }
+        else // binary search could not find the record we were looking for. because this is the only page our record
+             // could've been on (remember the range of the page measured with compareLiteralAndFront and compareLiteralAndBack),
+             // no point looking further
+          return false;
+      }
+    }
+  }
+  if(retval==2) return false;
+}
+

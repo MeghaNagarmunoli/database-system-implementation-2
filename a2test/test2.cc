@@ -110,16 +110,21 @@ void test3 () {
 
 	Record temp;
 
+
+
 	int cnt = 0;
 	cerr << "\t";
+	
 	while (dbfile.GetNext (temp, cnf, literal) && ++cnt) {
 		temp.Print (rel->schema());
+		cout<<"Count"<<cnt<<endl;
 		if (cnt % 10000 == 0) {
 			cerr << ".";
 		}
 	}
 	cout << "\n query over " << rel->path () << " returned " << cnt << " recs\n";
 	dbfile.Close ();
+
 
 }
 

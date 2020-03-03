@@ -33,6 +33,11 @@ public:
 	pthread_t myWorkerThread;
 
 	bool bigQCreated;
+	bool getNextCalledBefore;
+	OrderMaker* queryOrder; 
+	// OrderMaker myQueryOrder; 
+	// OrderMaker mySortOrder;  
+	// Record* pointerToLiteral;
 
 	SortedDBFile (); 
 	~SortedDBFile (); 
@@ -42,6 +47,8 @@ public:
 	int Close ();
 
 	void Load (Schema &myschema, const char *loadpath);
+	int readOnePage(Record &fetchme);
+
 
 	void MoveFirst ();
 	void Add (Record &addme);
@@ -51,6 +58,10 @@ public:
 	//void AddRecordToDiskFile(Record &addme);
 	void MergeData();
 	void AddRecordToDiskFile(File &tempFile, Page &tempPage, Record &rec, int &tempPageCount);
+	bool BinarySearch(Record& fetchme,OrderMaker& leftOrder,Record& literal,OrderMaker& rightOrder);
+	int GetNumofRecordPages();
+	//bool binarySearchCompare (Record* left,Record* right);
+
 
 };
 #endif

@@ -16,6 +16,7 @@ typedef struct{
 // This stores an individual comparison that is part of a CNF
 class Comparison {
 
+public: 
 	friend class ComparisonEngine;
 	friend class CNF;
 
@@ -27,8 +28,6 @@ class Comparison {
 	Type attType;
 
 	CompOperator op;
-
-public:
 
 	Comparison();
 
@@ -44,7 +43,7 @@ class Schema;
 
 // This structure encapsulates a sort order for records
 class OrderMaker {
-
+public:
 	friend class ComparisonEngine;
 	friend class CNF;
 
@@ -53,8 +52,6 @@ class OrderMaker {
 	int whichAtts[MAX_ANDS];
 	Type whichTypes[MAX_ANDS];
 
-public:
-	
 	// creates an empty OrdermMaker
 	OrderMaker();
 
@@ -86,6 +83,7 @@ class Record;
 
 class CNF {
 
+public :
 	friend class ComparisonEngine;
 
 	Comparison orList[MAX_ANDS][MAX_ORS];
@@ -93,7 +91,6 @@ class CNF {
 	int orLens[MAX_ANDS];
 	int numAnds;
 
-public:
 
 	// this returns an instance of the OrderMaker class that
 	// allows the CNF to be implemented using a sort-based

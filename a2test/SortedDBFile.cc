@@ -95,7 +95,7 @@ SortedDBFile::SortedDBFile () {
     totalPageCount = 0;
     currentPage = 0;
     filepath = NULL;
-    dbFileMode = read;
+    dbFileMode = readMode;
     bigQ = NULL;
     recordCursor = new Record();
     buffsz = 100;
@@ -103,6 +103,8 @@ SortedDBFile::SortedDBFile () {
     Pipe output(buffsz);
     bigQCreated  =false;
     getNextCalledBefore = false;
+    queryOM = new OrderMaker();
+    pageIndex=0;
 }
 
 SortedDBFile::~SortedDBFile () {
@@ -175,14 +177,14 @@ void SortedDBFile::Load (Schema &f_schema, const char *loadpath) {
         return;
     }
     
-    if(dbFileMode == read) {
+    if(dbFileMode == readMode) {
 
         OrderMaker &orderRef = *(sortInfo->myOrder);
         pthread_t thread1;
         threadArgs inputArgs = {*input, loadpath, &f_schema};
 	    pthread_create (&thread1, NULL, producer, (void*) &inputArgs);
         bigQ = new BigQ(*input, *output,orderRef, sortInfo->runLength);
-        dbFileMode = write;
+        dbFileMode = writeMode;
 
         threadArgs outputArgs = {*output, filepath, NULL};
         pthread_t thread2;
@@ -304,7 +306,7 @@ int SortedDBFile::Open (const char *f_path) {
 }
 
 void SortedDBFile::MoveFirst () {
-    if(dbFileMode == write) {
+    if(dbFileMode == writeMode) {
         MergeData();
     } 
     page.EmptyItOut();
@@ -313,13 +315,12 @@ void SortedDBFile::MoveFirst () {
         file.GetPage(&page, 0);
     }
     currentPage = 0;
-      //pageCursor\.GetFirst(recordCursor);
     dirtyRead = true;
     pageIndex = 0;
 }
 int SortedDBFile::Close () {
     //cout<< "in retrun "<< endl;
-    if(dbFileMode == write) {
+    if(dbFileMode == writeMode) {
         MergeData();
     }
     file.Close();
@@ -340,8 +341,8 @@ int SortedDBFile::Close () {
 // }
 
 void SortedDBFile::Add (Record &rec) {
-    cout<<"add"<<endl;
-    dbFileMode = write;
+    //cout<<"add"<<endl;
+    dbFileMode = writeMode;
     if(!bigQCreated) {
         bigQCreated= true;
         OrderMaker &orderRef = *(sortInfo->myOrder);
@@ -357,13 +358,13 @@ void SortedDBFile::Add (Record &rec) {
         // set up bigQ using a separate thread. See comments in
         // myWorkerRoutine to understand why
         pthread_create(&myWorkerThread, NULL, myWorkerRoutine, (void*)t);
-        dbFileMode = write;
+        dbFileMode = writeMode;
     }
     input->Insert(&rec);
 }
 
 int SortedDBFile::GetNext (Record &fetchme) {
-    if(dbFileMode == write) {
+    if(dbFileMode == writeMode) {
         MergeData();
 
     }
@@ -384,7 +385,10 @@ int SortedDBFile::GetNext (Record &fetchme) {
 }
 
 int SortedDBFile::GetNext (Record &fetchme, CNF &cnf, Record &literal) {
-    if(dbFileMode == write) {
+    Schema mySch("catalog","nation");
+    //recordCursor->Print(&mySch);
+    dirtyRead = true;
+    if(dbFileMode == writeMode) {
         MergeData();
     }
     OrderMaker dummy, cnfOM;
@@ -398,129 +402,142 @@ int SortedDBFile::GetNext (Record &fetchme, CNF &cnf, Record &literal) {
     {
         return FAILURE;
     }
-
-    OrderMaker queryOM;
+    //OrderMaker queryOM;
     OrderMaker *orderMaker = sortInfo -> myOrder;
-    int orderNum = 0, queryOrderNum = 0, i = 0;
-    for (orderNum = 0; orderNum < orderMaker->numAtts; orderNum++)
-    {
-        for (i = 0; i < cnf.numAnds; i++)
+    ComparisonEngine ce;
+    if(!getNextCalledBefore) {
+        page.GetFirst(recordCursor);
+        getNextCalledBefore = true;
+        int orderNum = 0, queryOrderNum = 0, i = 0;
+        for (orderNum = 0; orderNum < orderMaker->numAtts; orderNum++)
         {
+            for (i = 0; i < cnf.numAnds; i++)
+            {
 
-        if (cnf.orList[i][0].op != Equals)
-            continue;
+            if (cnf.orList[i][0].op != Equals)
+                continue;
 
-        if (cnf.orLens[i] != 1)
-            continue;
+            if (cnf.orLens[i] != 1)
+                continue;
 
-        if (cnf.orList[i][0].operand1 == Left && cnf.orList[i][0].operand2 == Literal && orderMaker->whichAtts[orderNum] == cnf.orList[i][0].whichAtt1)
-        {
+            if (cnf.orList[i][0].operand1 == Left && cnf.orList[i][0].operand2 == Literal && orderMaker->whichAtts[orderNum] == cnf.orList[i][0].whichAtt1)
+            {
 
-            queryOM.whichAtts[queryOrderNum] = orderMaker->whichAtts[orderNum];
-            queryOM.whichTypes[queryOrderNum] = orderMaker->whichTypes[orderNum];
-            queryOM.numAtts++;
+                queryOM->whichAtts[queryOrderNum] = orderMaker->whichAtts[orderNum];
+                queryOM->whichTypes[queryOrderNum] = orderMaker->whichTypes[orderNum];
+                queryOM->numAtts++;
+                break;
+            }
+            }
+
+            if (i == cnf.numAnds)
             break;
         }
-        }
+    
 
-        if (i == cnf.numAnds)
-        break;
-    }
+        
 
-    ComparisonEngine ce;
+        int sizeFile = file.GetLength() - 2;
 
-    int sizeFile = file.GetLength() - 2;
+        int m = (sizeFile + pageIndex) / 2, 
+        left = pageIndex + 1, 
+        right = sizeFile;
 
-    int m = (sizeFile + pageIndex) / 2, left = pageIndex + 1, right = sizeFile;
-
-    bool found_record = false;
-
-    if (queryOM.numAtts == 0)
-    {
-        found_record = true;
-        ComparisonEngine ce;
-        while (!ce.Compare(recordCursor, &literal, &cnf))
-        {
-        get_next_Record();
-        if (recordCursor == NULL)
-            return FAILURE;
-        }
-
-        fetchme.Consume(recordCursor);
-        get_next_Record();
-        dirtyRead = true;
-        return SUCCESS;
-    }
-
-    else
-    {
-        if (ce.Compare(recordCursor, &queryOM, &literal, &cnfOM) == 0)
-        {
-        found_record = true;
-        }
-
-        while (!found_record && page.GetFirst(recordCursor))
-        {
-        if (ce.Compare(recordCursor, &queryOM, &literal, &cnfOM) == 0)
+        bool found_record = false;
+        cout<<"Left :"<<left<<" , Right : "<<right<<endl;
+        if (queryOM->numAtts == 0)
         {
             found_record = true;
-            break;
-        }
-        }
+            ComparisonEngine ce;
+            while (!ce.Compare(recordCursor, &literal, &cnf))
+            {
+                get_next_Record();
+                if (recordCursor == NULL)
+                    return FAILURE;
+            }
 
-        while (!found_record && (right - left) != 1)
-        {
-        m = (left + right) / 2;
-        file.GetPage(&page, m);
-        page.GetFirst(recordCursor);
-
-        if (ce.Compare(recordCursor, &queryOM, &literal, &cnfOM) > 0)
-        {
-            right = m - 1;
-        }
-
-        else if (ce.Compare(recordCursor, &queryOM, &literal, &cnfOM) == 0)
-        {
-            right = m;
-        }
-
-        else if (ce.Compare(recordCursor, &queryOM, &literal, &cnfOM) < 0)
-        {
-            left = m;
-        }
-        }
-
-        if (!found_record)
-        {
-        file.GetPage(&page, left);
-        page.GetFirst(recordCursor);
-
-        while (ce.Compare(recordCursor, &queryOM, &literal, &cnfOM) != 0)
-        {
+            fetchme.Consume(recordCursor);
             get_next_Record();
-        }
-        }
-    }
-
-    while (ce.Compare(recordCursor, &queryOM, &literal, &cnfOM) == 0)
-    {
-        if (ce.Compare(recordCursor, &literal, &cnf) == SUCCESS)
-        {
-        fetchme.Consume(recordCursor);
-        get_next_Record();
-        dirtyRead = true;
-        return SUCCESS;
+            dirtyRead = true;
+            return SUCCESS;
         }
 
         else
         {
-        get_next_Record();
+            if (ce.Compare(recordCursor, queryOM, &literal, &cnfOM) == 0)
+            {
+                found_record = true;
+            }
 
-        if (recordCursor == NULL)
-        {
-            dirtyRead = true;
-            return FAILURE;
+            while (!found_record && page.GetFirst(recordCursor))
+            {
+                //recordCursor->Print(&mySch);
+                if (ce.Compare(recordCursor, queryOM, &literal, &cnfOM) == 0)
+                {
+                    found_record = true;
+                    break;
+                }
+            }
+            
+            while (!found_record && ((right - left) >= 1))
+            {
+                cout<<"Left :"<<left<<" , Right : "<<right<<endl;
+                m = (left + right) / 2;
+                if(m != left) {
+
+                }
+                file.GetPage(&page, m);
+                page.GetFirst(recordCursor);
+
+                if (ce.Compare(recordCursor, queryOM, &literal, &cnfOM) > 0)
+                {
+                    right = m - 1;
+                }
+
+                else if (ce.Compare(recordCursor, queryOM, &literal, &cnfOM) == 0)
+                {
+                    right = m;
+                }
+
+                else if (ce.Compare(recordCursor, queryOM, &literal, &cnfOM) < 0)
+                {
+                    left = m;
+                }
+            }
+
+            if (!found_record && left < sizeFile)
+            {
+                cout<<"Left :"<<left<<endl;
+                file.GetPage(&page, left);
+                page.GetFirst(recordCursor);
+
+                while (ce.Compare(recordCursor, queryOM, &literal, &cnfOM) != 0)
+                {
+                    get_next_Record();
+                }
+            }
         }
+    }
+
+    while (ce.Compare(recordCursor, queryOM, &literal, &cnfOM) == 0)
+    {
+        if (ce.Compare(recordCursor, &literal, &cnf) == SUCCESS)
+        {
+            fetchme.Consume(recordCursor);
+            get_next_Record();
+            dirtyRead = true;
+            return SUCCESS;
+        }
+
+        else
+        {
+            get_next_Record();
+
+            if (recordCursor == NULL)
+            {
+                dirtyRead = true;
+                return FAILURE;
+            }
         }
     }
 
@@ -530,7 +547,8 @@ int SortedDBFile::GetNext (Record &fetchme, CNF &cnf, Record &literal) {
 
 void SortedDBFile::MergeData(){
     input->ShutDown();
-    dbFileMode = read;
+    int count = 0;
+    dbFileMode = readMode;
     MoveFirst();
     Record fileRecord, pipeRecord; 
     ComparisonEngine ceng;
@@ -542,6 +560,7 @@ void SortedDBFile::MergeData(){
     tempFile.Open(0, mergeFileName);
     bool fileEmpty = false;
     bool outputPipeEmpty = false;
+    //cout<<"Begin reading current file"<<endl;
     if (GetNext(fileRecord) != 1){
         cout<<"file empty"<<endl;
         fileEmpty = true;
@@ -550,11 +569,13 @@ void SortedDBFile::MergeData(){
         cout<<"pipe empty"<<endl;
         outputPipeEmpty = true;
     }
-    if(!(fileEmpty | outputPipeEmpty)) {
+    if(!fileEmpty && !outputPipeEmpty) {
         cout<<"Begin loop"<<endl;
         while (true) {
             //returns 1 if fileRecord is greater
             if(ceng.Compare (&fileRecord, &pipeRecord, sortInfo->myOrder) == 1) {
+                count ++;
+
                 AddRecordToDiskFile(tempFile, tempPage, pipeRecord, pageCount);
                 if(output->Remove(&pipeRecord) != 1) {
                     outputPipeEmpty = true;
@@ -562,6 +583,7 @@ void SortedDBFile::MergeData(){
                 }
             } else {
                 AddRecordToDiskFile(tempFile, tempPage, fileRecord, pageCount);
+                count ++;
                 if(GetNext(fileRecord) != 1) {
                     fileEmpty = true;
                     break;
@@ -571,9 +593,10 @@ void SortedDBFile::MergeData(){
             
         }
     }
-    int count = 1;
+    //int count = 1;
     Schema mySchema("catalog", "nation");
     if(!outputPipeEmpty) {
+        count ++;
         AddRecordToDiskFile(tempFile, tempPage, pipeRecord, pageCount);
         while(output->Remove(&pipeRecord)) {
             count ++;
@@ -583,6 +606,7 @@ void SortedDBFile::MergeData(){
     }
     if(!fileEmpty) {
         AddRecordToDiskFile(tempFile, tempPage, fileRecord, pageCount);
+        count ++;
         while(GetNext(fileRecord)) {
             count++;
             //fileRecord.Print(&mySchema);
@@ -591,7 +615,7 @@ void SortedDBFile::MergeData(){
         //fileEmpty = true;
     }
     //cout<<filepath<<endl;
-    //cout<<mergeFileName<<endl;
+    cout<<"Records removec count "<<count<<endl;
     tempFile.AddPage(&tempPage, pageCount);
 
     //Now delete the original file and rename our merged file to original file.

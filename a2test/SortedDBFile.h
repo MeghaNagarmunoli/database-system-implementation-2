@@ -14,7 +14,7 @@
 struct SortInfo { OrderMaker *myOrder; int runLength;
 };
 
-typedef enum {read, write} Mode; 
+typedef enum {readMode, writeMode} Mode; 
 
 class SortedDBFile : public GenericDBFile {
 public:
@@ -40,7 +40,7 @@ public:
 	bool dirtyWrite;
 	bool bigQCreated;
 	bool getNextCalledBefore;
-	OrderMaker* queryOrder; 
+	OrderMaker* queryOM; 
 	// OrderMaker myQueryOrder; 
 	// OrderMaker mySortOrder;  
 	// Record* pointerToLiteral;

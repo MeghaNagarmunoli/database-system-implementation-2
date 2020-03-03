@@ -678,16 +678,17 @@ int CNF :: createQueryOrder (OrderMaker &sortOrder, OrderMaker &queryOrder) {
         continue;
       }
 
-      // made it this far, so first verify that it is an equality check
-    //   if (orList[i][0].op != Equals) {
-    //     continue;
-    //   }
+      //made it this far, so first verify that it is an equality check
+      if (orList[i][0].op != Equals) {
+        continue;
+      }
 
       // check that this attribute of the query CNF (the CNF object this method
       // is being called upon) is also present in the sortOrder
       if ((orList[i][0].operand1  == Left) &&
           (orList[i][0].whichAtt1 == sortOrder.whichAtts[j]) &&
           (orList[i][0].attType   == sortOrder.whichTypes[j])){
+
         queryOrder.whichAtts[queryOrder.numAtts] = i;
         queryOrder.whichTypes[queryOrder.numAtts] = orList[i][0].attType;
 

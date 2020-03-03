@@ -30,6 +30,7 @@ typedef struct {
 	bool write;
 }testutil;
 
+int add_data (FILE *src, int numrecs, int &res);
 class relation {
 
 private:

@@ -26,8 +26,8 @@ and follow the on-screen instructions.
 
 See [here](https://github.com/MeghaNagarmunoli/database-system-implementation-2/blob/master/a2test/Report.pdf) for results and implementation details.
 
-Using the driver:
-==================
+<h3>Using the driver:
+==================<h3>
 
 1. SETTINGS: The following variables control the various file locations and they
 are declared in test.h:
@@ -49,11 +49,11 @@ the BigQ constructor. Some examples are provided below. Note that to use this
 feature, you need to use the new version of the files Parse.y and Comparison.cc
 provided in this driver.
 
-CNF examples to specify sort order:
+<h3>CNF examples to specify sort order:
 ===================================
 
 dbfile      |  sortby                                  |  CNF
----------------------------------------------------------------------------------
+---------------------------------------------------------------------------------<h3>
 region      |  r_name 	 	                       | (r_name)
        
 partsupp    |  ps_suppkey, ps_partkey 		       | (ps_suppkey) AND (ps_partkey)
@@ -62,8 +62,8 @@ lineitem    |  l_shipdate, l_extendedprice, l_quantity | (l_shipdate) AND
 							 (l_extendedprice) AND 
 							 (l_quantity)
 
-How the driver works:
-=====================
+<h3>How the driver works:
+=====================<h3>
 
 Once a heap dbfile is selected and a CNF is specified for the sort order, the
 test driver sets up an input and an output pipe and passes them off to the BigQ
@@ -76,8 +76,8 @@ the input pipe when it has finished dumping all the records from the input dbfil
 and verifies that the data is in the correct sorted order (as encoded in the
 ordermaker instance passed off to BigQ).
 
-options:
-========
+<h4>options:
+========<h4>
 1. sort -- simply tells how many records were inserted into the input pipe and
 how many were received by the output pipe and if they were in the correct sorted
 order
@@ -104,8 +104,8 @@ and follow the on-screen instructions.
 See [here](https://github.com/MeghaNagarmunoli/database-system-implementation-2/blob/master/a2test/DB%20Implementation%20Project%202_%20Part%202.pdf) for results and implementation details.
 
 
-Using the driver:
-==================
+<h3>Using the driver:
+==================<h3>
 
 1. SETTINGS: The following variables control the various file locations and they
 are declared in test.h:

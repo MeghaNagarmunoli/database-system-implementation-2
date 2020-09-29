@@ -1,8 +1,10 @@
-<h3> Problem Statement: </h3>
+<h2>BigQ Implementation Part-1</h2>
 
-Test driver for Assignment 2 BigQ Milestone 1 (Spring 2020 dbi) 
+Contributors:
+[Siddharth Jain](https://github.com/siddharthj)
+[Megha Nagarmunoli](https://github.com/MeghaNagarmunoli)
 
-This test driver gives a menu-based interface to three options that allows you
+The test driver gives a menu-based interface to three options that allows you
 to test your code:
 
 	1. sort
@@ -21,6 +23,8 @@ To compile the driver, type
 To run the driver, type
 	test.out
 and follow the on-screen instructions.
+
+See [here](https://github.com/MeghaNagarmunoli/database-system-implementation-2/blob/master/a2test/Report.pdf) for results and implementation details.
 
 Using the driver:
 ==================
@@ -84,4 +88,34 @@ received off the output pipe on to the standard output
 3. sort + write -- dumps the records received from the output pipe into a heap
 dbfile (with the extension bigq)
 
+
+
+<h2>BigQ Implementation Part-2</h2>
+
+The test driver is for Part-2 is test2.out
+
+To compile the driver, type
+	make test2.out
+
+To run the driver, type
+	test2.out
+and follow the on-screen instructions.
+
+See [here](https://github.com/MeghaNagarmunoli/database-system-implementation-2/blob/master/a2test/DB%20Implementation%20Project%202_%20Part%202.pdf) for results and implementation details.
+
+
+Using the driver:
+==================
+
+1. SETTINGS: The following variables control the various file locations and they
+are declared in test.h:
+	o dbfile_dir -- this is where the driver can locate the binary heap
+dbfiles. The driver assumes that the dbfiles have the extension '.bin'.  By
+default, this is set to "" (thus all the heap dbfiles should be locatable in the
+same directory as the test driver).
+
+IMPORTANT: All additional files that you create (metadata and other things) 
+should be stored in the location specified by dbfile_dir.Donot hard code 
+specific paths into your files.Always use the dbfile_dir variable to 
+determine the location to store additional files.
 
